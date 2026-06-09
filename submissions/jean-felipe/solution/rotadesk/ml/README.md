@@ -1,64 +1,64 @@
 # RotaDesk — API do classificador (Render)
 
-TF-IDF + regressão logística (DS2), exposta via **FastAPI** para o Next.js em produção (Vercel não roda Python).
+TF-IDF + regressão logística (DS2), exposta via **FastAPI** para o Next.js em produção.
 
 ## Endpoints
 
 | Método | Rota | Descrição |
 |--------|------|-----------|
+| GET | `/` | Info do serviço |
 | GET | `/health` | Status + se `pipeline.joblib` existe |
 | POST | `/classify` | Body: `{"text": "..."}` → `topic_group`, `confidence`, `probabilities` |
 
+## ⚠️ 404 em `/health` ou `/classify`?
+
+O serviço Render está com **Root Directory errado** (apontando para a raiz do repo em vez de `ml/`).
+
+No painel Render → **Settings**:
+
+| Campo | Valor obrigatório |
+|-------|-------------------|
+| **Root Directory** | `submissions/jean-felipe/solution/rotadesk/ml` |
+| **Runtime** | Python 3.11 **ou** Docker |
+| **Build Command** | `pip install -r requirements.txt` |
+| **Start Command** | `uvicorn api:app --host 0.0.0.0 --port $PORT` |
+
+Salve → **Manual Deploy** → teste:
+
+```
+https://ai-master-challenge.onrender.com/health
+```
+
+Deve retornar `{"status":"ok","model_loaded":true}` — se ainda 404, o Root Directory não foi aplicado.
+
+### Opção Docker (mais à prova de erro)
+
+1. Render → Settings → **Environment** = Docker
+2. Root Directory = `submissions/jean-felipe/solution/rotadesk/ml`
+3. Usa o `Dockerfile` desta pasta automaticamente
+
 ## Modelo
+
+`pipeline.joblib` já está no repositório. Para regenerar:
 
 ```bash
 pip install -r requirements.txt
-python train_export.py   # gera pipeline.joblib (~5 MB) — precisa do CSV do DS2
+python train_export.py   # precisa do CSV do DS2 em data/
 ```
-
-O `pipeline.joblib` deve existir na pasta `ml/` antes do deploy (commitado ou gerado no build).
-
-## Deploy no Render
-
-1. [render.com](https://render.com) → **New** → **Blueprint** (ou Web Service)
-2. Conecte o repo `jeanflp/ai-master-challenge`
-3. **Root Directory:** `submissions/jean-felipe/solution/rotadesk/ml`
-4. **Runtime:** Python 3.11
-5. **Build:** `pip install -r requirements.txt`
-6. **Start:** `uvicorn api:app --host 0.0.0.0 --port $PORT`
-7. Confirme que `pipeline.joblib` está no repositório (ou adicione ao build se tiver dataset)
-
-Ou use o `render.yaml` na raiz do repo (Render detecta automaticamente no push).
 
 ## Vercel (Next.js)
 
-No `.env.local` / Environment Variables da Vercel:
-
 ```
-CLASSIFIER_API_URL=https://rotadesk-classifier.onrender.com
+CLASSIFIER_API_URL=https://ai-master-challenge.onrender.com
 ```
 
-**Atenção:** só a URL **base** do Render — **não** inclua `/classify` no final.
+Só a URL **base**, sem `/classify`. Redeploy na Vercel após o `/health` do Render responder 200.
 
-Valide antes:
-```bash
-curl https://SUA-URL.onrender.com/health
-# deve retornar: {"status":"ok","model_loaded":true}
-```
-
-Sem `CLASSIFIER_API_URL`, o app usa Python local — só funciona em `npm run dev`.
-
-### Erro "Classificador HTTP 404"
-
-1. `CLASSIFIER_API_URL` aponta para o **Render**, não para a Vercel
-2. URL sem `/classify` no final
-3. Root Directory no Render = `submissions/jean-felipe/solution/rotadesk/ml`
-4. `/health` retorna 200 antes de testar o simulador
-
-## Teste local da API
+## Teste local
 
 ```bash
 pip install -r requirements.txt
 uvicorn api:app --reload --port 8000
+curl http://localhost:8000/health
 curl -X POST http://localhost:8000/classify -H "Content-Type: application/json" -d "{\"text\": \"VPN not working\"}"
 ```

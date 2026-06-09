@@ -48,6 +48,15 @@ class ClassifyResponse(BaseModel):
     probabilities: dict[str, float]
 
 
+@app.get("/")
+def root():
+    return {
+        "service": "rotadesk-classifier",
+        "endpoints": ["/health", "POST /classify"],
+        "model_loaded": MODEL_PATH.exists(),
+    }
+
+
 @app.get("/health")
 def health():
     return {"status": "ok", "model_loaded": MODEL_PATH.exists()}
