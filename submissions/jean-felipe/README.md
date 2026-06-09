@@ -66,6 +66,7 @@ Artefatos: `solution/automacao/ds2_metrics.json`, `PROPOSTA.md`, `fluxo.md`, `ro
 - **Simulador:** criação de tickets com fluxo completo (ack → sklearn → LLM se &lt; 85% → roteamento).
 - **Chat:** atendimento simulado com RAG (`knowledge_articles`) e gpt-4o-mini.
 - **Kanban:** acompanhamento por status.
+- **Demo:** [RotaDesk na Vercel](https://ai-master-challenge-psi.vercel.app) · [Loom — walkthrough](https://www.loom.com/share/968fa698a69c49e9ad9ac9cdcdbf6204)
 
 Setup: `solution/rotadesk/README.md`
 
@@ -83,7 +84,7 @@ Setup: `solution/rotadesk/README.md`
 - DS1 e DS2 são **datasets distintos** (taxonomias diferentes); classificador DS2 não foi validado em texto do DS1. Erro esperado em produção (gap de domínio) está quantificado em `solution/automacao/PROPOSTA.md` e reproduzível via `domain_gap` em `ds2_metrics.json` (`python analise_dataset2.py` com ambos CSVs).
 - Timestamps do DS1 são **ruidosos** (49,3% ordem invertida); ciclo mede apenas FRT→TTR, não abertura→resolução.
 - Estimativas de desperdício em Pending/Open usam **mediana dos Closed** — ilustrativas.
-- Protótipo usa **Supabase + OpenAI** locais; sem deploy em produção nem medição de CSAT pós-piloto.
+- Triagem **sklearn** em produção via **API no Render** (`CLASSIFIER_API_URL`); Vercel só hospeda o Next.js. Sem medição de CSAT pós-piloto.
 - `pipeline.joblib` (~5 MB) deve ser gerado localmente (`python ml/train_export.py`).
 
 ---
@@ -92,7 +93,9 @@ Setup: `solution/rotadesk/README.md`
 
 ### Datasets (não versionados)
 
-Baixar do Kaggle e colocar no clone local:
+Baixar do [Kaggle DS1](https://www.kaggle.com/datasets/suraj520/customer-support-ticket-dataset) e [Kaggle DS2](https://www.kaggle.com/datasets/adisongoh/it-service-ticket-classification-dataset).
+
+Colocar na pasta `data/` **na raiz do workspace** (pai do clone `ai-master-challenge/`), ou passar `--dataset /caminho/arquivo.csv` nos scripts:
 
 ```
 data/dataset1-support-tickets/customer_support_tickets.csv
@@ -102,29 +105,33 @@ data/dataset2-it-classification/all_tickets_processed_improved_v3.csv
 ### Diagnóstico DS1
 
 ```bash
-cd solution/diagnostico
+cd submissions/jean-felipe/solution/diagnostico
 pip install -r requirements.txt
 python analise_dataset1.py
+# alternativa: python analise_dataset1.py --dataset /caminho/customer_support_tickets.csv
 ```
 
 ### Automação DS2
 
 ```bash
-cd solution/automacao
+cd submissions/jean-felipe/solution/automacao
 pip install -r requirements.txt
 python analise_dataset2.py
+# alternativa: python analise_dataset2.py --dataset /caminho/all_tickets_processed_improved_v3.csv
 ```
 
 ### RotaDesk
 
 ```bash
-cd solution/rotadesk
-pip install -r ml/requirements.txt && python ml/train_export.py
+cd submissions/jean-felipe/solution/rotadesk
+pip install -r ml/requirements.txt && python ml/train_export.py   # gera ml/pipeline.joblib
 npm install
 cp .env.local.example .env.local   # Supabase + OPENAI_API_KEY
-# Rodar supabase/migrations/001_initial.sql no SQL Editor
+# Rodar supabase/migrations/001_initial.sql no SQL Editor do Supabase
 npm run dev
 ```
+
+Deploy: **Vercel** (frontend) + **Render** (API sklearn) — ver `solution/rotadesk/README.md` e `solution/rotadesk/ml/README.md`.
 
 ---
 
@@ -168,8 +175,9 @@ npm run dev
 - [x] Process log narrativo — `process-log/PROCESS.md`
 - [x] Git history — branch `submission/jean-felipe`
 - [x] Scripts e relatórios reproduzíveis em `solution/`
-- [ ] Screenshots — adicionar em `process-log/screenshots/`
-- [ ] Chat exports — adicionar em `process-log/chat-exports/`
+- [x] Screen recording — [Loom: walkthrough do RotaDesk](https://www.loom.com/share/968fa698a69c49e9ad9ac9cdcdbf6204)
+- [ ] Screenshots — opcional (`process-log/screenshots/`)
+- [ ] Chat exports — opcional (`process-log/chat-exports/`)
 
 ---
 

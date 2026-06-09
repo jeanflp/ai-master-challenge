@@ -32,5 +32,5 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# modelo gerado (rodar python ml/train_export.py)
-ml/pipeline.joblib
+# modelo: versionado para deploy Render (regenerar com python ml/train_export.py)
+# ml/pipeline.joblib

@@ -64,7 +64,14 @@ O erro `404 NOT_FOUND` com ID `gru1::...` é da **plataforma Vercel** (não do N
 6. Desative **Include files outside the root directory**.
 7. Se nada resolver: delete o projeto na Vercel e reimporte o repo (config corrompida).
 
-> **Limitação:** o classificador sklearn roda via Python local (`ml/classify.py`). Na Vercel serverless o triagem sklearn **não funciona** — ack, dashboard, kanban e chat com LLM sim. Para demo completa, use `npm run dev` local.
+## Classificador sklearn em produção (Render)
+
+A Vercel **não executa Python**. O classificador roda numa **API FastAPI no Render**:
+
+1. Deploy do serviço em `ml/` — ver [`ml/README.md`](./ml/README.md)
+2. Na Vercel, configure `CLASSIFIER_API_URL=https://seu-servico.onrender.com`
+
+Com isso, criar ticket em produção usa **sklearn na Render** → LLM se confiança &lt; 85% → roteamento. Localmente (`npm run dev`), sem `CLASSIFIER_API_URL`, continua usando `python ml/classify.py`.
 
 ## Páginas
 
