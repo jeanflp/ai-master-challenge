@@ -108,8 +108,9 @@ Rodei `analise_dataset2.py` com ambos os CSVs. Resultados em `ds2_metrics.json` 
 | `../solution/diagnostico/output/` — relatório e gráficos DS1 | [x] |
 | `../solution/automacao/ds2_metrics.json` — métricas DS2 + `domain_gap` | [x] |
 | Git history na branch `submission/jean-felipe` | [x] |
-| `screenshots/` — prints das conversas com Cursor | [ ] |
-| `chat-exports/` — exports se houver sessões externas | [ ] |
+| [Loom — walkthrough do RotaDesk](https://www.loom.com/share/968fa698a69c49e9ad9ac9cdcdbf6204) | [x] |
+| `screenshots/` — prints das conversas com Cursor | [ ] opcional |
+| `chat-exports/` — exports se houver sessões externas | [ ] opcional |
 
 ---
 
