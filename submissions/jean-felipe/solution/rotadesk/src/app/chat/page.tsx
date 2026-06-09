@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   Mail,
@@ -30,7 +30,7 @@ const CHANNELS: { id: TicketChannel; label: string; icon: typeof MessageSquare }
   { id: "Social media", label: "Redes", icon: Share2 },
 ];
 
-export default function ChatPage() {
+function ChatPageContent() {
   const searchParams = useSearchParams();
   const [channel, setChannel] = useState<TicketChannel>("Chat");
   const [ticket, setTicket] = useState<TicketWithMessages | null>(null);
@@ -327,6 +327,20 @@ export default function ChatPage() {
         </div>
       </div>
     </DashboardLayout>
+  );
+}
+
+export default function ChatPage() {
+  return (
+    <Suspense
+      fallback={
+        <DashboardLayout title="Atendimento">
+          <p className="text-sm text-muted-foreground">Carregando atendimento...</p>
+        </DashboardLayout>
+      }
+    >
+      <ChatPageContent />
+    </Suspense>
   );
 }
 

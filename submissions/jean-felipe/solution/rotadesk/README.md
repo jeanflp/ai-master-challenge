@@ -35,6 +35,22 @@ npm run dev
 
 Abra [http://localhost:3000](http://localhost:3000)
 
+## Deploy na Vercel
+
+O app fica em um subdiretório do monorepo. **Sem isso, a Vercel retorna 404.**
+
+1. **Root Directory** (Settings → General):  
+   `submissions/jean-felipe/solution/rotadesk`
+2. **Environment Variables** (Settings → Environment Variables):
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+   - `SUPABASE_SERVICE_ROLE_KEY`
+   - `OPENAI_API_KEY`
+3. **Build Command:** `npm run build` (padrão)
+4. Redeploy após salvar as variáveis.
+
+> **Limitação:** o classificador sklearn roda via Python local (`ml/classify.py`). Na Vercel serverless o triagem sklearn **não funciona** — ack, dashboard, kanban e chat com LLM sim. Para demo completa, use `npm run dev` local.
+
 ## Páginas
 
 | Rota | Função |
