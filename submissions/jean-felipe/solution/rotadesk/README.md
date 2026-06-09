@@ -37,17 +37,20 @@ Abra [http://localhost:3000](http://localhost:3000)
 
 ## Deploy na Vercel
 
-O app fica em um subdiretório do monorepo. **Sem isso, a Vercel retorna 404.**
+O app fica em um subdiretório do monorepo. **Sem as duas configurações abaixo, a Vercel retorna 404.**
 
-1. **Root Directory** (Settings → General):  
+1. **Production Branch** (Settings → Git → Production Branch):  
+   `submission/jean-felipe` **ou** `main` (após merge da submissão no fork)  
+   > A branch `main` do fork **não** contém o app até o merge — deploy em `main` sem código = 404.
+2. **Root Directory** (Settings → General):  
    `submissions/jean-felipe/solution/rotadesk`
-2. **Environment Variables** (Settings → Environment Variables):
+3. **Environment Variables** (Settings → Environment Variables):
    - `NEXT_PUBLIC_SUPABASE_URL`
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
    - `SUPABASE_SERVICE_ROLE_KEY`
    - `OPENAI_API_KEY`
-3. **Build Command:** `npm run build` (padrão)
-4. Redeploy após salvar as variáveis.
+4. **Build Command:** `npm run build` (padrão)
+5. Redeploy após salvar branch, root directory e variáveis.
 
 > **Limitação:** o classificador sklearn roda via Python local (`ml/classify.py`). Na Vercel serverless o triagem sklearn **não funciona** — ack, dashboard, kanban e chat com LLM sim. Para demo completa, use `npm run dev` local.
 
