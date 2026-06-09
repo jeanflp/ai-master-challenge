@@ -21,6 +21,66 @@ Challenge 002 · Jean Felipe · Base: `solution/diagnostico/` + `solution/automa
 
 ---
 
+## Gap DS2 × suporte real — erro esperado em produção
+
+O classificador foi treinado e medido **apenas no DS2** (tickets de TI interna: Hardware, HR Support, Access…). A operação alvo vem do **DS1** (suporte ao cliente: Refund, Cancellation, Billing…). **Não há rótulo DS2 nos tickets DS1**, então a acurácia real em produção **não é observável** neste recorte — só dá para estimar com proxy e bounds.
+
+### O que medimos (in-domain, holdout DS2)
+
+| Métrica | Valor | Implicação |
+|---------|-------|------------|
+| Macro-F1 holdout | **85,7%** | ~**14,3%** de erro se o domínio fosse idêntico |
+| Auto-roteados com conf ≥ **0,85** | ver `ds2_metrics.json` | Subconjunto de maior confiança |
+| Erro no subconjunto auto (conf ≥ **0,8**, referência) | **1,57%** (acurácia 98,43%) | **Piso otimista** — assume zero domain shift |
+| Classe fraca | Administrative rights, F1 **0,76** | Mitigada por revisão obrigatória |
+
+### Proxy de domain shift (DS2 → texto DS1)
+
+Com ambos os datasets locais, `analise_dataset2.py` (seção 5) roda o modelo treinado no DS2 sobre as **8.469 descrições do DS1** e grava em `ds2_metrics.json` → `domain_gap`:
+
+1. **Confiança média/mediana** no DS1 vs holdout DS2 — queda indica texto fora do domínio de treino.
+2. **% auto-roteável** no DS1 vs in-domain no mesmo threshold (85%) — gap em pontos percentuais mostra quanto a fila de revisão humana cresce em produção.
+3. **Distribuição de classes preditas** no DS1 vs taxonomia real do DS1 (Refund, Technical issue…) — evidencia desalinhamento estrutural (DS2 não tem reembolso/cancelamento).
+
+> Reexecute `python analise_dataset2.py` após baixar os dois CSVs para atualizar os números do proxy.
+
+### Bounds de erro em produção (subconjunto auto-roteado)
+
+Sem ground truth, usamos o erro medido no holdout in-domain do subconjunto auto e aplicamos penalidade explícita:
+
+| Cenário | Taxa de erro no auto-subset | Lógica |
+|---------|----------------------------|--------|
+| **Otimista** | **~1,6%** | Mesmo erro do holdout DS2 em conf ≥ 0,8 (domínio idêntico) |
+| **Conservador** | **~3,1%** | **2×** o erro in-domain no auto-subset |
+| **Pessimista** | **~11,6%** | Erro in-domain no auto-subset **+ 10 pp** absolutos |
+
+**Volume ilustrativo (DS1, 8.469 tickets/ano, ~40% auto no threshold 85% — premissa do ROI):**
+
+```
+Tickets auto-roteados ≈ 3.388/ano
+Misroutes estimados   ≈ 53 (otimista) | ~105 (conservador) | ~390 (pessimista)
+```
+
+Isso são **roteamentos errados sem revisão humana** — tickets que iriam para fila errada. Não incluem Refund/Cancel/Critical (humano obrigatório por regra DS1) nem conf &lt; 85% (revisão de triagem).
+
+### Mitigações já na proposta
+
+| Mitigação | Efeito no erro |
+|-----------|----------------|
+| Threshold **85%** | Reduz auto-roteamento vs 70–80%; aumenta acurácia no subconjunto |
+| Humano em Refund / Cancel / Critical | ~**41%** do DS1 nunca depende só do classificador |
+| Administrative rights → revisão | Classe com F1 0,76 fora do auto cego |
+| Conf &lt; 85% → fila de revisão | Erros de baixa confiança viram correção humana, não misroute silencioso |
+| Queda de confiança OOD (proxy DS1) | Menos auto, mais revisão — troca custo de triagem por risco |
+
+### O que validar no piloto
+
+1. **Taxa de correção** na fila de revisão humana (erro real observável).
+2. **% auto** em conf ≥ 85% vs bounds acima.
+3. **Tempo de triagem** — domain shift pode inflar revisão e reduzir ROI da alavanca 3 (`roi.md`).
+
+---
+
 ## O que terá de automação
 
 ### 1. Auto-confirmação (ack) na entrada

@@ -12,6 +12,7 @@ Uso:
 from __future__ import annotations
 
 import argparse
+import csv
 import json
 import sys
 from datetime import datetime, timezone
@@ -42,8 +43,14 @@ DEFAULT_DATASET = (
     WORKSPACE_ROOT
     / "data/dataset2-it-classification/all_tickets_processed_improved_v3.csv"
 )
+DEFAULT_DS1 = (
+    WORKSPACE_ROOT
+    / "data/dataset1-support-tickets/customer_support_tickets.csv"
+)
 OUTPUT_DIR = SCRIPT_DIR / "output"
 METRICS_PATH = SCRIPT_DIR / "ds2_metrics.json"
+PRODUCT_THRESHOLD = 0.85
+DS1_ANNUAL_VOLUME = 8_469
 
 HOLDOUT_SIZE = 0.2
 RANDOM_STATE = 42
@@ -197,7 +204,7 @@ def evaluate_holdout(
         if label in report
     }
 
-    thresholds = [0.5, 0.6, 0.7, 0.8]
+    thresholds = [0.5, 0.6, 0.7, 0.8, PRODUCT_THRESHOLD]
     triage = {}
     for t in thresholds:
         mask = max_proba >= t
@@ -255,6 +262,100 @@ def run_cross_validation(pipe: Pipeline, X: pd.Series, y: pd.Series) -> dict:
         "accuracy": summarize("accuracy"),
         "macro_f1": summarize("f1_macro"),
         "weighted_f1": summarize("f1_weighted"),
+    }
+
+
+def load_ds1_descriptions(path: Path) -> pd.Series | None:
+    if not path.exists():
+        return None
+    df = pd.read_csv(path, encoding="utf-8", quoting=csv.QUOTE_MINIMAL, engine="python")
+    if "Ticket Description" not in df.columns:
+        return None
+    texts = df["Ticket Description"].astype(str).str.strip()
+    return texts[texts != ""].reset_index(drop=True)
+
+
+def assess_domain_gap(
+    pipe: Pipeline,
+    holdout: dict,
+    ds1_path: Path = DEFAULT_DS1,
+    product_threshold: float = PRODUCT_THRESHOLD,
+    annual_volume: int = DS1_ANNUAL_VOLUME,
+) -> dict | None:
+    """Proxy de desvio DS2 (TI) vs texto do DS1 (suporte ao cliente)."""
+    ds1_texts = load_ds1_descriptions(ds1_path)
+    if ds1_texts is None or len(ds1_texts) == 0:
+        return None
+
+    df1 = pd.read_csv(ds1_path, encoding="utf-8", quoting=csv.QUOTE_MINIMAL, engine="python")
+    type_dist = (
+        df1["Ticket Type"].value_counts(normalize=True).mul(100).round(1).to_dict()
+        if "Ticket Type" in df1.columns
+        else {}
+    )
+
+    proba_ds1 = pipe.predict_proba(ds1_texts)
+    conf_ds1 = proba_ds1.max(axis=1)
+    pred_ds1 = pipe.classes_[proba_ds1.argmax(axis=1)]
+    pred_dist = (
+        pd.Series(pred_ds1).value_counts(normalize=True).mul(100).round(1).to_dict()
+    )
+
+    thr_key = str(product_threshold)
+    in_domain = holdout["confidence_triage"].get(thr_key)
+    if not in_domain:
+        return None
+
+    err_in_auto = round(1 - in_domain["accuracy_on_auto_subset"], 4)
+    pct_auto_in = in_domain["pct_auto_routed"] / 100
+    pct_auto_ds1 = float((conf_ds1 >= product_threshold).mean())
+
+    # Sem rotulos DS2 no DS1: bounds a partir do holdout in-domain
+    err_conservative = round(min(err_in_auto * 2, 1.0), 4)
+    err_pessimistic = round(min(err_in_auto + 0.10, 1.0), 4)
+
+    n_auto_ds1_annual = int(round(annual_volume * pct_auto_ds1))
+
+    return {
+        "ds1_path": str(ds1_path),
+        "n_ds1_texts": int(len(ds1_texts)),
+        "ds1_ticket_type_pct": type_dist,
+        "ds2_predicted_on_ds1_pct": pred_dist,
+        "confidence_on_ds1": {
+            "mean": round(float(conf_ds1.mean()), 4),
+            "median": round(float(np.median(conf_ds1)), 4),
+            "p25": round(float(np.percentile(conf_ds1, 25)), 4),
+            "p75": round(float(np.percentile(conf_ds1, 75)), 4),
+        },
+        "product_threshold": product_threshold,
+        "in_domain_at_threshold": in_domain,
+        "out_of_domain_at_threshold": {
+            "pct_would_auto_route": round(pct_auto_ds1 * 100, 2),
+            "n_would_auto_route": int((conf_ds1 >= product_threshold).sum()),
+        },
+        "auto_route_gap_pp": round((pct_auto_in - pct_auto_ds1) * 100, 2),
+        "error_rate_bounds_on_auto_subset": {
+            "in_domain_measured": err_in_auto,
+            "conservative_2x_in_domain": err_conservative,
+            "pessimistic_plus_10pp": err_pessimistic,
+        },
+        "estimated_misroutes_per_year": {
+            "annual_volume": annual_volume,
+            "n_auto_routed_at_threshold": n_auto_ds1_annual,
+            "conservative_2x": int(round(n_auto_ds1_annual * err_conservative)),
+            "pessimistic_plus_10pp": int(round(n_auto_ds1_annual * err_pessimistic)),
+        },
+        "methodology": (
+            "Classificador treinado apenas no DS2 (TI). Textos do DS1 nao tem rotulo DS2; "
+            "erro real em producao e nao observavel neste recorte. Usamos (1) queda de confianca "
+            "e % auto-roteavel no DS1 como proxy de domain shift e (2) bounds de erro no subconjunto "
+            "auto do holdout in-domain (medido) com penalidade 2x (conservador) ou +10pp (pessimista)."
+        ),
+        "caveats": [
+            "Taxonomias DS1 (Refund, Billing, ...) e DS2 (Hardware, HR, ...) nao sao comparaveis.",
+            "Bounds nao substituem piloto com revisao humana e taxa de correcao medida.",
+            "Regras de produto (Refund/Cancel/Critical, Admin rights) reduzem auto-roteamento alem do threshold.",
+        ],
     }
 
 
@@ -467,6 +568,37 @@ def main() -> int:
         if viability["weak_classes_f1_below_0_80"]:
             print(f"\nClasses com F1 < 0.80 no holdout: {', '.join(viability['weak_classes_f1_below_0_80'])}")
 
+        domain_gap = assess_domain_gap(pipe, holdout)
+        if domain_gap:
+            section("5. GAP DS2 x SUPORTE REAL (DS1) — PROXY DE ERRO EM PRODUCAO")
+            print(domain_gap["methodology"])
+            print(
+                f"\nConfianca no DS1 (n={domain_gap['n_ds1_texts']:,}): "
+                f"media={domain_gap['confidence_on_ds1']['mean']:.3f}, "
+                f"mediana={domain_gap['confidence_on_ds1']['median']:.3f}"
+            )
+            print(
+                f"Auto-roteavel conf>={PRODUCT_THRESHOLD}: "
+                f"in-domain {domain_gap['in_domain_at_threshold']['pct_auto_routed']:.1f}% vs "
+                f"DS1 {domain_gap['out_of_domain_at_threshold']['pct_would_auto_route']:.1f}% "
+                f"(gap {domain_gap['auto_route_gap_pp']:+.1f} pp)"
+            )
+            bounds = domain_gap["error_rate_bounds_on_auto_subset"]
+            est = domain_gap["estimated_misroutes_per_year"]
+            print(
+                f"\nErro no subconjunto auto (in-domain, medido): {bounds['in_domain_measured']:.2%}"
+            )
+            print(f"Bounds em producao: conservador 2x={bounds['conservative_2x_in_domain']:.2%}, "
+                  f"pessimista +10pp={bounds['pessimistic_plus_10pp']:.2%}")
+            print(
+                f"Misroutes/ano estimados ({est['n_auto_routed_at_threshold']:,} auto @ threshold): "
+                f"conservador={est['conservative_2x']:,}, pessimista={est['pessimistic_plus_10pp']:,}"
+            )
+        else:
+            print(
+                f"\n(Gap DS1 nao calculado — dataset ausente em {DEFAULT_DS1})"
+            )
+
         if not args.no_charts:
             save_charts(eda, holdout)
 
@@ -495,6 +627,7 @@ def main() -> int:
         "holdout": holdout,
         "cross_validation": cv,
         "viability": viability,
+        "domain_gap": domain_gap,
     }
 
     METRICS_PATH.write_text(json.dumps(metrics, indent=2, ensure_ascii=False), encoding="utf-8")

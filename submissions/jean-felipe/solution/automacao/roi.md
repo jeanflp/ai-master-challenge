@@ -21,6 +21,8 @@ Premissas explícitas. Números operacionais do **DS1** (`diagnostico/output/dia
 | P9 | Acurácia subconjunto auto (referência) | **≥ 98,43%** | DS2 holdout em conf **≥ 0,8** (ponto medido mais próximo de 85%) |
 | P10 | % auto-roteável em conf ≥ 0,8 | **45,4%** | DS2 holdout — em **≥ 0,85** usamos **≤ 45,4%** (conservador) |
 | P11 | DS1 e DS2 sem join | — | Taxonomias diferentes; benefício de triagem é **estimado por analogia**, não medido no DS1 |
+| P12 | Erro em produção (gap DS2×DS1) | **~3,1%** no auto-subset (conservador) | Holdout in-domain: **1,57%** erro em conf ≥ 0,8; penalidade **2×** por domain shift — ver `PROPOSTA.md` e `domain_gap` em `ds2_metrics.json` |
+| P13 | Misroutes/ano (ilustrativo) | **~105** (conservador) | 3.388 auto-roteados × 3,1%; pessimista **~390** — só tickets sem revisão humana |
 
 ---
 
@@ -163,6 +165,8 @@ Cenário DS1 de recuperação em Closed (P75→P25): **8.838 h** — **não** in
 | Confundir linhas físicas com tickets | DS1: 29.808 linhas → 8.469 tickets |
 | Prometer CSAT por velocidade | Correlação **−0,001** |
 | Aplicar % do DS2 diretamente ao DS1 | Sem join — % auto-roteado é **analogia** |
+| Domain shift DS2→DS1 | Classificador de TI em texto de suporte ao cliente; **~105 misroutes/ano** no cenário conservador (3,1% × auto) — proxy em `analise_dataset2.py` §5 |
+| ROI de triagem superestimado | Queda de confiança OOD pode **aumentar % em revisão** e reduzir as 282 h economizadas na alavanca 3 |
 
 ---
 

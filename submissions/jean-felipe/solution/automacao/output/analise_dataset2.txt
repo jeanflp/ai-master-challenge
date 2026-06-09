@@ -47,6 +47,7 @@ Triagem por confianca (holdout):
   conf >= 0.6:  65.8% auto (6,297 tickets), acc no subconjunto=0.958
   conf >= 0.7:  55.8% auto (5,336 tickets), acc no subconjunto=0.974
   conf >= 0.8:  45.4% auto (4,344 tickets), acc no subconjunto=0.984
+  conf >= 0.85:  39.0% auto (3,733 tickets), acc no subconjunto=0.989
 
 ========================================================================
 3. VALIDACAO CRUZADA 5-FOLD
@@ -65,6 +66,18 @@ Triagem automatica por texto e VIAVEL com baseline linear. Macro-F1 holdout 85.7
 Cruza com DS1: 67% dos tickets sem resolucao e gargalos em Refund/Cancellation. Classificacao automatica em 8 filas IT reduz tempo de triagem manual e libera agentes para casos de baixa confianca e tipos de alto impacto em satisfacao.
 
 Classes com F1 < 0.80 no holdout: Administrative rights
+
+========================================================================
+5. GAP DS2 x SUPORTE REAL (DS1) — PROXY DE ERRO EM PRODUCAO
+========================================================================
+Classificador treinado apenas no DS2 (TI). Textos do DS1 nao tem rotulo DS2; erro real em producao e nao observavel neste recorte. Usamos (1) queda de confianca e % auto-roteavel no DS1 como proxy de domain shift e (2) bounds de erro no subconjunto auto do holdout in-domain (medido) com penalidade 2x (conservador) ou +10pp (pessimista).
+
+Confianca no DS1 (n=8,469): media=0.454, mediana=0.423
+Auto-roteavel conf>=0.85: in-domain 39.0% vs DS1 2.6% (gap +36.5 pp)
+
+Erro no subconjunto auto (in-domain, medido): 1.13%
+Bounds em producao: conservador 2x=2.26%, pessimista +10pp=11.13%
+Misroutes/ano estimados (217 auto @ threshold): conservador=5, pessimista=24
 
 Grafico salvo: C:\Users\jeafl\OneDrive\Desktop\g4-challenge\ai-master-challenge\submissions\jean-felipe\solution\automacao\output\eda_categorias.png
 Grafico salvo: C:\Users\jeafl\OneDrive\Desktop\g4-challenge\ai-master-challenge\submissions\jean-felipe\solution\automacao\output\confusion_matrix_holdout.png

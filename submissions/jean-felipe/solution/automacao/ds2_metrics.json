@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-09T06:18:35.550965+00:00",
+  "generated_at": "2026-06-09T08:54:32.456465+00:00",
   "dataset_path": "C:\\Users\\jeafl\\OneDrive\\Desktop\\g4-challenge\\data\\dataset2-it-classification\\all_tickets_processed_improved_v3.csv",
   "eda": {
     "n_samples": 47837,
@@ -316,6 +316,11 @@
         "pct_auto_routed": 45.4,
         "n_auto_routed": 4344,
         "accuracy_on_auto_subset": 0.9843
+      },
+      "0.85": {
+        "pct_auto_routed": 39.02,
+        "n_auto_routed": 3733,
+        "accuracy_on_auto_subset": 0.9887
       }
     }
   },
@@ -372,6 +377,61 @@
       "Rotear automaticamente tickets com confianca >= 0.7",
       "Enfileirar baixa confianca para revisao humana ou fine-tuned/LLM",
       "Mapear Topic_group IT para filas operacionais do DS1 (Refund, Technical, etc.)"
+    ]
+  },
+  "domain_gap": {
+    "ds1_path": "C:\\Users\\jeafl\\OneDrive\\Desktop\\g4-challenge\\data\\dataset1-support-tickets\\customer_support_tickets.csv",
+    "n_ds1_texts": 8469,
+    "ds1_ticket_type_pct": {
+      "Refund request": 20.7,
+      "Technical issue": 20.6,
+      "Cancellation request": 20.0,
+      "Product inquiry": 19.4,
+      "Billing inquiry": 19.3
+    },
+    "ds2_predicted_on_ds1_pct": {
+      "Hardware": 56.3,
+      "Administrative rights": 28.7,
+      "Access": 8.6,
+      "Miscellaneous": 5.0,
+      "Storage": 0.7,
+      "HR Support": 0.4,
+      "Internal Project": 0.2,
+      "Purchase": 0.0
+    },
+    "confidence_on_ds1": {
+      "mean": 0.4542,
+      "median": 0.4228,
+      "p25": 0.3507,
+      "p75": 0.5244
+    },
+    "product_threshold": 0.85,
+    "in_domain_at_threshold": {
+      "pct_auto_routed": 39.02,
+      "n_auto_routed": 3733,
+      "accuracy_on_auto_subset": 0.9887
+    },
+    "out_of_domain_at_threshold": {
+      "pct_would_auto_route": 2.56,
+      "n_would_auto_route": 217
+    },
+    "auto_route_gap_pp": 36.46,
+    "error_rate_bounds_on_auto_subset": {
+      "in_domain_measured": 0.0113,
+      "conservative_2x_in_domain": 0.0226,
+      "pessimistic_plus_10pp": 0.1113
+    },
+    "estimated_misroutes_per_year": {
+      "annual_volume": 8469,
+      "n_auto_routed_at_threshold": 217,
+      "conservative_2x": 5,
+      "pessimistic_plus_10pp": 24
+    },
+    "methodology": "Classificador treinado apenas no DS2 (TI). Textos do DS1 nao tem rotulo DS2; erro real em producao e nao observavel neste recorte. Usamos (1) queda de confianca e % auto-roteavel no DS1 como proxy de domain shift e (2) bounds de erro no subconjunto auto do holdout in-domain (medido) com penalidade 2x (conservador) ou +10pp (pessimista).",
+    "caveats": [
+      "Taxonomias DS1 (Refund, Billing, ...) e DS2 (Hardware, HR, ...) nao sao comparaveis.",
+      "Bounds nao substituem piloto com revisao humana e taxa de correcao medida.",
+      "Regras de produto (Refund/Cancel/Critical, Admin rights) reduzem auto-roteamento alem do threshold."
     ]
   }
 }
