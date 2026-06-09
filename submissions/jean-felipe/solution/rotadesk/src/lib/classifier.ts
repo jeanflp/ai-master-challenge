@@ -9,7 +9,7 @@ export interface ClassificationResult {
 
 const PYTHON = process.env.PYTHON_PATH || "python";
 
-const CLASSIFY_SCRIPT = path.join(process.cwd(), "ml", "classify.py");
+const CLASSIFY_SCRIPT = path.join(/* turbopackIgnore: true */ process.cwd(), "ml", "classify.py");
 
 export async function classifyText(text: string): Promise<ClassificationResult> {
   return new Promise((resolve, reject) => {

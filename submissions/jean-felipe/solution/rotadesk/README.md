@@ -52,6 +52,15 @@ O app fica em um subdiretório do monorepo. **Sem as duas configurações abaixo
 4. **Build Command:** `npm run build` (padrão)
 5. Redeploy após salvar branch, root directory e variáveis.
 
+### Build OK mas 404 na URL?
+
+O erro `404 NOT_FOUND` com ID `gru1::...` é da **plataforma Vercel** (não do Next.js). Se o build passou:
+
+1. **Deployments** → abra o deploy com ✓ Ready → clique **Visit** (use essa URL, não um domínio antigo).
+2. Se só o preview abre: **⋯ → Promote to Production**.
+3. **Settings → General → Root Directory** deve ser exatamente `submissions/jean-felipe/solution/rotadesk` (sem `/` no final).
+4. Desative **Include files outside the root directory** (não é necessário para este app).
+
 > **Limitação:** o classificador sklearn roda via Python local (`ml/classify.py`). Na Vercel serverless o triagem sklearn **não funciona** — ack, dashboard, kanban e chat com LLM sim. Para demo completa, use `npm run dev` local.
 
 ## Páginas
