@@ -38,7 +38,22 @@ No `.env.local` / Environment Variables da Vercel:
 CLASSIFIER_API_URL=https://rotadesk-classifier.onrender.com
 ```
 
-Sem essa variável, o app usa Python local (`spawn classify.py`) — só funciona em `npm run dev`.
+**Atenção:** só a URL **base** do Render — **não** inclua `/classify` no final.
+
+Valide antes:
+```bash
+curl https://SUA-URL.onrender.com/health
+# deve retornar: {"status":"ok","model_loaded":true}
+```
+
+Sem `CLASSIFIER_API_URL`, o app usa Python local — só funciona em `npm run dev`.
+
+### Erro "Classificador HTTP 404"
+
+1. `CLASSIFIER_API_URL` aponta para o **Render**, não para a Vercel
+2. URL sem `/classify` no final
+3. Root Directory no Render = `submissions/jean-felipe/solution/rotadesk/ml`
+4. `/health` retorna 200 antes de testar o simulador
 
 ## Teste local da API
 

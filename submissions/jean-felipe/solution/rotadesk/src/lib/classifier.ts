@@ -8,25 +8,45 @@ export interface ClassificationResult {
 }
 
 const PYTHON = process.env.PYTHON_PATH || "python";
-const CLASSIFIER_API_URL = process.env.CLASSIFIER_API_URL?.replace(/\/$/, "");
 
 const CLASSIFY_SCRIPT = path.join(/* turbopackIgnore: true */ process.cwd(), "ml", "classify.py");
 
+/** Base da API Render — sem barra final e sem sufixo /classify */
+function getClassifierApiBase(): string | undefined {
+  const raw = process.env.CLASSIFIER_API_URL?.trim();
+  if (!raw) return undefined;
+  let base = raw.replace(/\/+$/, "");
+  if (base.endsWith("/classify")) {
+    base = base.slice(0, -"/classify".length);
+  }
+  return base;
+}
+
+const CLASSIFIER_API_BASE = getClassifierApiBase();
+
 async function classifyViaApi(text: string): Promise<ClassificationResult> {
-  const res = await fetch(`${CLASSIFIER_API_URL}/classify`, {
+  const base = CLASSIFIER_API_BASE!;
+  const url = `${base}/classify`;
+
+  const res = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ text }),
+    cache: "no-store",
   });
   const body = await res.json().catch(() => ({}));
   if (!res.ok) {
-    const msg =
+    const detail =
       typeof body.detail === "string"
         ? body.detail
         : typeof body.error === "string"
           ? body.error
-          : `Classificador HTTP ${res.status}`;
-    throw new Error(msg);
+          : null;
+    const hint =
+      res.status === 404
+        ? ` — confira CLASSIFIER_API_URL (só a base, ex: https://xxx.onrender.com) e GET ${base}/health no Render`
+        : "";
+    throw new Error(detail ?? `Classificador HTTP ${res.status} em ${url}${hint}`);
   }
   return body as ClassificationResult;
 }
@@ -63,7 +83,7 @@ async function classifyViaPython(text: string): Promise<ClassificationResult> {
 }
 
 export async function classifyText(text: string): Promise<ClassificationResult> {
-  if (CLASSIFIER_API_URL) {
+  if (CLASSIFIER_API_BASE) {
     return classifyViaApi(text);
   }
   return classifyViaPython(text);
